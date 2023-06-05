@@ -180,9 +180,9 @@ class MoreMenuItem {
                 icon: Icons.domain,
                 path: '/assets'),
             MoreMenuItem(
-                title: '${S.of(context).auditLogs}',
+                title: 'Check Tokenaaa',
                 icon: Icons.track_changes,
-                path: '/auditLogs')
+                path: '/testing'),
           ]);
           break;
         case Authority.CUSTOMER_USER:

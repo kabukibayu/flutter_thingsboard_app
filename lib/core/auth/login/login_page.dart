@@ -26,7 +26,7 @@ class _LoginPageState extends TbPageState<LoginPage> {
   final ButtonStyle _oauth2ButtonWithTextStyle = OutlinedButton.styleFrom(
       padding: EdgeInsets.all(16),
       alignment: Alignment.centerLeft,
-      foregroundColor: Colors.black87);
+      backgroundColor: Colors.black87);
 
   final ButtonStyle _oauth2IconButtonStyle = OutlinedButton.styleFrom(
       padding: EdgeInsets.all(16), alignment: Alignment.center);
