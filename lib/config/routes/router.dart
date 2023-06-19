@@ -12,7 +12,7 @@ import 'package:thingsboard_app/modules/device/device_routes.dart';
 import 'package:thingsboard_app/modules/home/home_routes.dart';
 import 'package:thingsboard_app/modules/profile/profile_routes.dart';
 import 'package:thingsboard_app/modules/tenant/tenant_routes.dart';
-import 'package:thingsboard_app/modules/testing_page/testing_routes.dart';
+import 'package:thingsboard_app/modules/option_page/option_routes.dart';
 import 'package:thingsboard_app/utils/ui_utils_routes.dart';
 
 class ThingsboardAppRouter {

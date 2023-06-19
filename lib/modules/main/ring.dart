@@ -1,13 +1,17 @@
 import 'package:alarm/alarm.dart';
 import 'package:flutter/material.dart';
+import 'package:thingsboard_app/core/context/tb_context.dart';
+import 'package:thingsboard_app/modules/main/main_page.dart';
 
 class AlarmRingScreen extends StatelessWidget {
   final AlarmSettings alarmSettings;
+  final TbContext tbContext;
+  final String title;
 
-  const AlarmRingScreen({Key? key, required this.alarmSettings})
+  const AlarmRingScreen({Key? key, required this.alarmSettings, required this.tbContext, required this.title})
       : super(key: key);
+      
 
-  @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: SafeArea(
@@ -15,7 +19,7 @@ class AlarmRingScreen extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
             Text(
-              "You alarm (${alarmSettings.id}) is ringing...",
+              title,
               style: Theme.of(context).textTheme.titleLarge,
             ),
             const Text("🔔", style: TextStyle(fontSize: 50)),
@@ -24,23 +28,11 @@ class AlarmRingScreen extends StatelessWidget {
               children: [
                 RawMaterialButton(
                   onPressed: () {
-                    final now = DateTime.now();
-                    Alarm.set(
-                      alarmSettings: alarmSettings.copyWith(
-                        dateTime: DateTime(
-                          now.year,
-                          now.month,
-                          now.day,
-                          now.hour,
-                          now.minute,
-                          0,
-                          0,
-                        ).add(const Duration(minutes: 1)),
-                      ),
-                    ).then((_) => Navigator.pop(context));
+                    Alarm.stop(alarmSettings.id)
+                        .then((_) => Navigator.push(context, MaterialPageRoute(builder: (BuildContext context) => MainPage(tbContext, path: '/alarms'))));
                   },
                   child: Text(
-                    "Snooze",
+                    "Alarm Page",
                     style: Theme.of(context).textTheme.titleLarge,
                   ),
                 ),

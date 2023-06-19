@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:thingsboard_app/core/context/tb_context.dart';
 import 'package:thingsboard_app/core/context/tb_context_widget.dart';
 import 'package:thingsboard_app/generated/l10n.dart';
@@ -7,6 +9,9 @@ import 'package:thingsboard_app/modules/device/devices_main_page.dart';
 import 'package:thingsboard_app/modules/home/home_page.dart';
 import 'package:thingsboard_app/modules/more/more_page.dart';
 import 'package:thingsboard_client/thingsboard_client.dart';
+import 'dart:async';
+import 'package:alarm/alarm.dart' as arlm;
+import 'package:thingsboard_app/modules/main/ring.dart';
 
 class TbMainNavigationItem {
   final Widget page;
@@ -35,6 +40,7 @@ class TbMainNavigationItem {
     } else {
       return false;
     }
+    
   }
 
   static List<TbMainNavigationItem> getItems(TbContext tbContext) {
@@ -104,6 +110,7 @@ class TbMainNavigationItem {
 }
 
 class MainPage extends TbPageWidget {
+  
   final String _path;
 
   MainPage(TbContext tbContext, {required String path})
@@ -119,6 +126,11 @@ class _MainPageState extends TbPageState<MainPage>
   late ValueNotifier<int> _currentIndexNotifier;
   late final List<TbMainNavigationItem> _tabItems;
   late TabController _tabController;
+  FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+    FlutterLocalNotificationsPlugin();
+  bool alarmJendela = true;
+  bool alarmPintu = true;
+
 
   @override
   void initState() {
@@ -129,6 +141,136 @@ class _MainPageState extends TbPageState<MainPage>
         initialIndex: currentIndex, length: _tabItems.length, vsync: this);
     _currentIndexNotifier = ValueNotifier(currentIndex);
     _tabController.animation!.addListener(_onTabAnimation);
+    initServices();
+  }
+
+  Future<void> initNotifications() async {
+  var initializationSettingsAndroid =
+    new AndroidInitializationSettings('@mipmap/ic_launcher');
+
+  final InitializationSettings initializationSettings =
+      InitializationSettings(android: initializationSettingsAndroid);
+
+  await flutterLocalNotificationsPlugin.initialize(initializationSettings);
+  }
+
+  Future<void> scheduleNotification() async {
+  AndroidNotificationDetails androidPlatformChannelSpecifics =
+      AndroidNotificationDetails(
+    'alarm_channel_id',
+    'Alarm',
+    importance: Importance.max,
+    priority: Priority.high,
+    playSound: false,
+  );
+
+  NotificationDetails platformChannelSpecifics =
+      NotificationDetails(android: androidPlatformChannelSpecifics);
+
+  await flutterLocalNotificationsPlugin.show(
+    0,
+    'Alarm',
+    'Alarm is ringing!',
+    platformChannelSpecifics,
+  );
+}
+
+  Future<void> navigateToRingScreen(arlm.AlarmSettings alarmSettings, String title) async {
+    await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => AlarmRingScreen(alarmSettings: alarmSettings, tbContext: tbContext, title: title,),
+        ));
+  }
+  void runAlarm(title) {
+    final alarmSettings = arlm.AlarmSettings(
+      id: 1,
+      dateTime: DateTime.now(),
+      assetAudioPath: 'assets/music/nokia.mp3',
+    );
+    arlm.Alarm.set(alarmSettings: alarmSettings);
+    scheduleNotification();
+    navigateToRingScreen(alarmSettings, title);
+  }
+
+  initServices() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    alarmJendela = (prefs.getBool('alarmJendela') ?? true);
+    alarmPintu = (prefs.getBool('alarmPintu') ?? true);
+    await initNotifications();
+    await arlm.Alarm.init();
+    webSocket();
+  }
+
+  webSocket() {
+    var entityFilter = EntityTypeFilter(entityType: EntityType.DEVICE);
+    var pageLink = EntityDataPageLink(pageSize: 10);
+    var devicesQuery = EntityDataQuery(entityFilter: entityFilter, pageLink: pageLink);
+    tbClient
+        .getEntityQueryService()
+        .findEntityDataByQuery(devicesQuery)
+        .then((devices) {
+      if (devices.data.isNotEmpty) {
+        print(devices.data);
+        var currentTime = DateTime.now().millisecondsSinceEpoch;
+        var timeWindow = Duration(hours: 24).inMilliseconds;
+
+        // Create the time series command to get telemetry data
+        var tsCmd = TimeSeriesCmd(
+          keys: ['WR', 'WL', 'DR', 'DL'],
+          startTs: currentTime - timeWindow,
+          timeWindow: timeWindow,
+        );
+
+        // Create the entity data command with the entity query and time series command
+        var cmd = EntityDataCmd(query: devicesQuery, tsCmd: tsCmd);
+
+        // Get the telemetry service
+        var telemetryService = tbClient.getTelemetryService();
+
+        // Subscribe to entity updates
+        var subscription = TelemetrySubscriber(telemetryService, [cmd]);
+        telemetryService.subscribe(subscription);
+
+        // Listen to entity data updates
+        subscription.entityDataStream.listen((entityDataUpdate) {
+          // Print the received entity data update
+          try {
+            print(
+                'Received entity data update: ${entityDataUpdate.update![0].timeseries}');
+            
+            
+            dynamic data = entityDataUpdate.update![0].timeseries;
+            if (entityDataUpdate.update![0].timeseries.containsKey('WR') && alarmJendela) {
+              dynamic wrValues = data["WR"][0].value ?? '';
+              checkValue(wrValues, "Your Right Window is Open");
+            } else if(entityDataUpdate.update![0].timeseries.containsKey('WL') && alarmJendela){
+              dynamic wlValues = data["WL"][0].value ?? '';
+              checkValue(wlValues, "Your Left Window is Open");
+            } else if(entityDataUpdate.update![0].timeseries.containsKey('DR') && alarmPintu){
+              dynamic drValues = data["DR"][0].value ?? '';
+              checkValue(drValues, "Your Right Door is Open");
+            } else if(entityDataUpdate.update![0].timeseries.containsKey('DL')&& alarmPintu){
+              dynamic dlValues = data["DL"][0].value ?? '';
+              checkValue(dlValues, "Your Left Door is Open");
+            } else {
+              print("No value found");
+            }
+          } catch (e) {
+            print(e);
+          }
+        });
+      } else {
+        print('No devices found.');
+      }
+    });
+  }
+
+  void checkValue(dynamic jsonValues, String title) {
+    bool aktifAlarm = (jsonValues == 'true');
+    if (aktifAlarm) {
+      runAlarm(title);
+    }
   }
 
   @override

@@ -172,17 +172,9 @@ class MoreMenuItem {
         case Authority.TENANT_ADMIN:
           items.addAll([
             MoreMenuItem(
-                title: '${S.of(context).customers}',
-                icon: Icons.supervisor_account,
-                path: '/customers'),
-            MoreMenuItem(
-                title: '${S.of(context).assets}',
-                icon: Icons.domain,
-                path: '/assets'),
-            MoreMenuItem(
-                title: 'Check Tokenaaa',
+                title: 'Alarm Option',
                 icon: Icons.track_changes,
-                path: '/testing'),
+                path: '/option'),
           ]);
           break;
         case Authority.CUSTOMER_USER:
