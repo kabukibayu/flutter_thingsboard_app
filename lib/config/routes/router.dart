@@ -40,7 +40,7 @@ class ThingsboardAppRouter {
     AuditLogsRoutes(_tbContext).registerRoutes();
     CustomerRoutes(_tbContext).registerRoutes();
     TenantRoutes(_tbContext).registerRoutes();
-    TestingRoute(_tbContext).registerRoutes();
+    OptionRoute(_tbContext).registerRoutes();
   }
 
   TbContext get tbContext => _tbContext;
